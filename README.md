@@ -1,4 +1,4 @@
-# akka-http-jwt-security
+# AkkaHTTP JWT Security
 A basic example to implement a role based authentication and authorization with Akka HTTP using JWT Token.
 
 # License
