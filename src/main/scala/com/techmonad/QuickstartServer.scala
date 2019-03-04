@@ -12,7 +12,7 @@ import akka.stream.ActorMaterializer
 object QuickstartServer extends App with UserRoutes {
 
   // set up ActorSystem and other dependencies here
-  implicit val system: ActorSystem = ActorSystem("helloAkkaHttpServer")
+  implicit val system: ActorSystem = ActorSystem("TechmonadAkkaHttpServer")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContext = system.dispatcher
 

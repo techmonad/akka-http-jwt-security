@@ -34,7 +34,7 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
     }
 
     "be able to add users (POST /users)" in {
-      val user = User("Kapi", 42, "jp")
+      val user = User("Kapi", 42, "jp", List("admin", "user"))
       val userEntity = Marshal(user).to[MessageEntity].futureValue // futureValue is from ScalaFutures
 
       // using the RequestBuilding DSL:

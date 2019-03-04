@@ -1,6 +1,6 @@
 package com.techmonad
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.event.Logging
 
 import scala.concurrent.duration._
@@ -18,7 +18,9 @@ import com.techmonad.UserRegistryActor._
 import akka.pattern.ask
 import akka.util.Timeout
 
-trait UserRoutes extends JsonSupport {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+trait UserRoutes extends JwtSecurity {
 
   // we leave these abstract, since they will be provided by the App
   implicit def system: ActorSystem
@@ -32,44 +34,68 @@ trait UserRoutes extends JsonSupport {
   implicit lazy val timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
 
   lazy val userRoutes: Route =
-    pathPrefix("users") {
+    pathPrefix("auth") {
       concat(
         pathEnd {
-          concat(
-            get {
-              val users: Future[Users] =
-                (userRegistryActor ? GetUsers).mapTo[Users]
-              complete(users)
-            },
-            post {
-              entity(as[User]) { user =>
-                val userCreated: Future[ActionPerformed] =
-                  (userRegistryActor ? CreateUser(user)).mapTo[ActionPerformed]
-                onSuccess(userCreated) { performed =>
-                  log.info("Created user [{}]: {}", user.name, performed.description)
-                  complete((StatusCodes.Created, performed))
-                }
+          post {
+            entity(as[Auth]) { auth =>
+              val maybeUser: Future[Option[User]] = (userRegistryActor ? Auth(auth.name)).mapTo[Option[User]]
+              val maybeToken = maybeUser.map {
+                case Some(user) => Some(JwtToken(encodeToken(user)))
+                case None => None
               }
-            })
-        },
-        path(Segment) { name =>
-          concat(
-            get {
-              val maybeUser: Future[Option[User]] =
-                (userRegistryActor ? GetUser(name)).mapTo[Option[User]]
               rejectEmptyResponse {
-                complete(maybeUser)
+                complete(maybeToken)
               }
-            },
-            delete {
-              val userDeleted: Future[ActionPerformed] =
-                (userRegistryActor ? DeleteUser(name)).mapTo[ActionPerformed]
-              onSuccess(userDeleted) { performed =>
-                log.info("Deleted user [{}]: {}", name, performed.description)
-                complete((StatusCodes.OK, performed))
-              }
-            })
+            }
+          }
         })
-    }
+    } ~
+      pathPrefix("users") {
+        concat(
+          pathEnd {
+            concat(
+              get {
+                authenticatedWithRole("user") { user =>
+                  val users: Future[Users] = (userRegistryActor ? GetUsers).mapTo[Users]
+                  complete(users)
+                }
+              },
+              post {
+                authenticatedWithRole("admin") { user =>
+                  entity(as[User]) { user =>
+                    val userCreated: Future[ActionPerformed] =
+                      (userRegistryActor ? CreateUser(user)).mapTo[ActionPerformed]
+                    onSuccess(userCreated) { performed =>
+                      log.info("Created user [{}]: {}", user.name, performed.description)
+                      complete((StatusCodes.Created, performed))
+                    }
+                  }
+                }
+              })
+          },
+          path(Segment) { name =>
+            concat(
+              get {
+                authenticatedWithRole("user") { user =>
+                  val maybeUser: Future[Option[User]] =
+                    (userRegistryActor ? GetUser(name)).mapTo[Option[User]]
+                  rejectEmptyResponse {
+                    complete(maybeUser)
+                  }
+                }
+              },
+              delete {
+                authenticatedWithRole("admin") { user =>
+                  val userDeleted: Future[ActionPerformed] =
+                    (userRegistryActor ? DeleteUser(name)).mapTo[ActionPerformed]
+                  onSuccess(userDeleted) { performed =>
+                    log.info("Deleted user [{}]: {}", name, performed.description)
+                    complete((StatusCodes.OK, performed))
+                  }
+                }
+              })
+          })
+      }
 
 }
