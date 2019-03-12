@@ -1,37 +1,18 @@
 package com.techmonad
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.event.Logging
-
-import scala.concurrent.duration._
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.directives.MethodDirectives.delete
-import akka.http.scaladsl.server.directives.MethodDirectives.get
-import akka.http.scaladsl.server.directives.MethodDirectives.post
-import akka.http.scaladsl.server.directives.RouteDirectives.complete
+import akka.http.scaladsl.server.directives.MethodDirectives.{ delete, get, post }
 import akka.http.scaladsl.server.directives.PathDirectives.path
-
-import scala.concurrent.Future
-import com.techmonad.UserRegistryActor._
-import akka.pattern.ask
-import akka.util.Timeout
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import akka.http.scaladsl.server.directives.RouteDirectives.complete
 
 trait UserRoutes extends JwtSecurity {
 
-  // we leave these abstract, since they will be provided by the App
   implicit def system: ActorSystem
 
   lazy val log = Logging(system, classOf[UserRoutes])
-
-  // other dependencies that UserRoutes use
-  def userRegistryActor: ActorRef
-
-  // Required by the `ask` (?) method below
-  implicit lazy val timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
 
   lazy val userRoutes: Route =
     pathPrefix("auth") {
@@ -39,8 +20,8 @@ trait UserRoutes extends JwtSecurity {
         pathEnd {
           post {
             entity(as[Auth]) { auth =>
-              val maybeUser: Future[Option[User]] = (userRegistryActor ? Auth(auth.name)).mapTo[Option[User]]
-              val maybeToken = maybeUser.map {
+              val maybeUser: Option[User] = userRegistry.getUser(auth)
+              val maybeToken = maybeUser match {
                 case Some(user) => Some(JwtToken(encodeToken(user)))
                 case None => None
               }
@@ -57,20 +38,17 @@ trait UserRoutes extends JwtSecurity {
             concat(
               get {
                 authenticatedWithRole("user") { user =>
-                  val users: Future[Users] = (userRegistryActor ? GetUsers).mapTo[Users]
+                  val users = userRegistry.getUsers()
                   complete(users)
                 }
               },
               post {
                 authenticatedWithRole("admin") { user =>
                   entity(as[User]) { user =>
-                    val userCreated: Future[ActionPerformed] =
-                      (userRegistryActor ? CreateUser(user)).mapTo[ActionPerformed]
-                    onSuccess(userCreated) { performed =>
-                      log.info("Created user [{}]: {}", user.name, performed.description)
-                      complete((StatusCodes.Created, performed))
-                    }
+                    val userCreated = userRegistry.create(user)
+                    complete(userCreated)
                   }
+
                 }
               })
           },
@@ -78,8 +56,7 @@ trait UserRoutes extends JwtSecurity {
             concat(
               get {
                 authenticatedWithRole("user") { user =>
-                  val maybeUser: Future[Option[User]] =
-                    (userRegistryActor ? GetUser(name)).mapTo[Option[User]]
+                  val maybeUser: Option[User] = userRegistry.getUser(name)
                   rejectEmptyResponse {
                     complete(maybeUser)
                   }
@@ -87,15 +64,13 @@ trait UserRoutes extends JwtSecurity {
               },
               delete {
                 authenticatedWithRole("admin") { user =>
-                  val userDeleted: Future[ActionPerformed] =
-                    (userRegistryActor ? DeleteUser(name)).mapTo[ActionPerformed]
-                  onSuccess(userDeleted) { performed =>
-                    log.info("Deleted user [{}]: {}", name, performed.description)
-                    complete((StatusCodes.OK, performed))
-                  }
+                  val userDeleted = userRegistry.delete(user.name)
+                  complete(userDeleted)
                 }
               })
           })
       }
+
+  val userRegistry: UserRegistry
 
 }
