@@ -16,6 +16,7 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
   override val userRegistry = UserRegistry
 
   "UserRoutes" should {
+
     "return no users if no present (GET /users)" in {
       // note that there's no need for the host part in the uri:
       val request = HttpRequest(uri = "/users")
