@@ -1,6 +1,5 @@
 package com.techmonad
 
-import com.techmonad.UserRegistryActor.ActionPerformed
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json.DefaultJsonProtocol
 
@@ -13,7 +12,5 @@ trait JsonSupport extends SprayJsonSupport {
   implicit val authJsonFormat = jsonFormat1(Auth)
   implicit val userJsonFormat = jsonFormat4(User)
   implicit val usersJsonFormat = jsonFormat1(Users)
-
-  implicit val actionPerformedJsonFormat = jsonFormat1(ActionPerformed)
 
 }
