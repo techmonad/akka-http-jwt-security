@@ -1,6 +1,6 @@
 lazy val akkaHttpVersion  = "10.1.14"
 lazy val akkaVersion      = "2.5.21"
-lazy val jwtVersion       = "5.0.0"
+lazy val jwtVersion       = "6.0.0"
 
 lazy val root = (project in file(".")).
   settings(
@@ -13,7 +13,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
-      "com.pauldijou"     %% "jwt-core"             % jwtVersion,
+      "com.github.jwt-scala"     %% "jwt-core"             % jwtVersion,
 
       "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,
