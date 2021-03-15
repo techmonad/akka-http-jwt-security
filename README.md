@@ -1,4 +1,4 @@
-# AkkaHTTP JWT Security
+# AkkaHTTP JWT Security [![Codeship Status for techmonad/akka-http-jwt-security](https://app.codeship.com/projects/9ee6b8ff-4dcc-4f9f-94d8-154228d380be/status?branch=master)](https://app.codeship.com/projects/434411)
 A basic example to implement a role based authentication and authorization with Akka HTTP using JWT Token.
 
 #### Run application:
