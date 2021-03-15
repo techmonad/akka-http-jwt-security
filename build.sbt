@@ -1,12 +1,12 @@
 lazy val akkaHttpVersion  = "10.1.14"
-lazy val akkaVersion      = "2.5.21"
-lazy val jwtVersion       = "6.0.0"
+lazy val akkaVersion      = "2.5.32"
+lazy val jwtVersion       = "5.0.0"
 
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization    := "com.techmonad",
-      scalaVersion    := "2.12.7"
+      scalaVersion    := "2.12.13"
     )),
     name := "akka-http-jwt-security",
     libraryDependencies ++= Seq(
@@ -18,6 +18,6 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,
       "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion     % Test,
-      "org.scalatest"     %% "scalatest"            % "3.0.9"         % Test
+      "org.scalatest"     %% "scalatest"            % "3.2.6"         % Test
     )
   )
