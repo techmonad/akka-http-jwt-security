@@ -1,5 +1,8 @@
 package com.techmonad
 
+import java.time.Clock
+
+import akka.event.Logging
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{ AuthorizationFailedRejection, Directive1 }
 import akka.http.scaladsl.server.Directives._
@@ -12,10 +15,16 @@ import scala.util.{ Failure, Success }
 trait JwtSecurity extends JsonSupport {
 
   private val expiresIn = 1 * 24 * 60 * 60
+  implicit val clock: Clock = Clock.systemUTC
+
   private val secretKey = "techmonad-akka-http-jwt"
 
-  def encodeToken(claim: User): String = {
-    Jwt.encode(JwtClaim(claim.toJson.prettyPrint).issuedNow.expiresIn(expiresIn), secretKey, JwtAlgorithm.HS256)
+  def encodeToken(user: User): String = {
+    val claim =
+      JwtClaim(user.toJson.prettyPrint)
+        .issuedNow
+        .expiresIn(expiresIn)
+    Jwt.encode(claim, secretKey, JwtAlgorithm.HS256)
   }
 
   def authenticatedWithRole(role: String): Directive1[User] = {
@@ -33,15 +42,19 @@ trait JwtSecurity extends JsonSupport {
           case None => reject(AuthorizationFailedRejection).toDirective[Tuple1[User]]
         }
 
-      case _ => complete(StatusCodes.Unauthorized)
+      case t =>
+        println(t.get)
+        complete(StatusCodes.Unauthorized)
     }
 
   private def getClaims(jwtToken: String): Option[User] = {
     try {
       Jwt.decode(jwtToken, secretKey, Seq(JwtAlgorithm.HS256)) match {
         case Success(value) =>
-          Some(value.parseJson.convertTo[User])
-        case Failure(ex) => None
+          Some(value.content.parseJson.convertTo[User])
+        case Failure(ex) =>
+          ex.printStackTrace()
+          None
       }
     } catch {
       case NonFatal(ex) => None

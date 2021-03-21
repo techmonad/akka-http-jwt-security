@@ -2,6 +2,7 @@ package com.techmonad
 
 import akka.actor.ActorSystem
 import akka.event.Logging
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.{ delete, get, post }
@@ -11,8 +12,7 @@ import akka.http.scaladsl.server.directives.RouteDirectives.complete
 trait UserRoutes extends JwtSecurity {
 
   implicit def system: ActorSystem
-
-  lazy val log = Logging(system, classOf[UserRoutes])
+  val userRegistry: UserRegistry
 
   lazy val userRoutes: Route =
     pathPrefix("auth") {
@@ -42,7 +42,7 @@ trait UserRoutes extends JwtSecurity {
               authenticatedWithRole("admin") { user =>
                 entity(as[User]) { user =>
                   val userCreated = userRegistry.create(user)
-                  complete(userCreated)
+                  execute(userCreated)
                 }
 
               }
@@ -59,13 +59,15 @@ trait UserRoutes extends JwtSecurity {
             } ~
               delete {
                 authenticatedWithRole("admin") { user =>
-                  val userDeleted = userRegistry.delete(user.name)
-                  complete(userDeleted)
+                  val userDeleted = userRegistry.delete(name)
+                  execute(userDeleted)
                 }
               }
           }
       }
 
-  val userRegistry: UserRegistry
+  def execute(res: String): Route = {
+    complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, res)))
+  }
 
 }
